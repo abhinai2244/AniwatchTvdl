@@ -32,9 +32,9 @@ admin = filters.create(check_admin)
 @check_ban
 @check_fsub
 async def handle_settings(client: Client, message):
-    import cantarella.core.state as state
-    status_icon = "✅ ON" if state.ongoing_enabled else "❌ OFF"
-    toggle_label = "🔴 Turn OFF" if state.ongoing_enabled else "🟢 Turn ON"
+    ongoing_enabled = await db.get_user_setting(0, "ongoing_enabled", False)
+    status_icon = "✅ ON" if ongoing_enabled else "❌ OFF"
+    toggle_label = "🔴 Turn OFF" if ongoing_enabled else "🟢 Turn ON"
 
     caption = (
         "<blockquote><b>⚙️ ʙᴏᴛ ꜱᴇᴛᴛɪɴɢꜱ</b>\n\n"

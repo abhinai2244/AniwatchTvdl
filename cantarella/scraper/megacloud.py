@@ -24,7 +24,7 @@ class Megacloud:
         self.embed_url = embed_url
 
     def _extract_client_key(self, html) -> str:
-        match = re.search(r'([a-zA-Z0-9]{48})|x: "([a-zA-Z0-9]{16})", y: "([a-zA-Z0-9]{16})", z: "([a-zA-Z0-9]{16})"};', html)
+        match = re.search(r'([a-zA-Z0-9]{48})|x: "([a-zA-Z0-9]{16})", y: "([a-zA-Z0-9]{16})", z: "([a-zA-Z0-9]{16})"}', html)
         if not match: return ""
         groups = match.groups()
         if groups[0]: return groups[0]
@@ -67,22 +67,39 @@ class Megacloud:
         if not sid_match: return {"sources": [], "tracks": []}
         sid = sid_match.group(1)
 
+        # Derive base_url from embed_url
+        base_url_match = re.search(r'(https?://[^/]+)', self.embed_url)
+        base_url = base_url_match.group(1) if base_url_match else self.base_url
+
         try:
             session = requests.Session()
             proxy_dict = get_proxy_dict(get_random_proxy())
             if proxy_dict:
                 session.proxies.update(proxy_dict)
-            resp_html = session.get(self.embed_url, headers=self.headers, impersonate="chrome").text
+
+            headers = self.headers.copy()
+            headers["referer"] = "https://aniwatchtv.to/"
+
+            # Prefer megacloud.tv over megacloud.blog
+            curr_embed_url = self.embed_url.replace(".blog", ".tv")
+            base_url = "https://megacloud.tv"
+
+            resp_html = session.get(curr_embed_url, headers=headers, impersonate="chrome").text
             client_key = self._extract_client_key(resp_html)
 
-            get_src_url = f"{self.base_url}/embed-2/v3/e-1/getSources"
-            resp = session.get(get_src_url, headers=self.headers, params={"id": sid, "_k": client_key}, impersonate="chrome").json()
+            get_src_url = f"{base_url}/embed-2/v3/e-1/getSources"
+            headers["referer"] = curr_embed_url
+
+            resp_obj = session.get(get_src_url, headers=headers, params={"id": sid, "_k": client_key}, impersonate="chrome")
+            resp = resp_obj.json()
 
             if isinstance(resp.get('sources'), str):
-                pass
+                decrypted = self._process_sources(resp['sources'], client_key)
+                resp['sources'] = json.loads(decrypted)
 
             if "sources" not in resp: resp["sources"] = []
             if "tracks" not in resp: resp["tracks"] = []
             return resp
-        except:
+        except Exception as e:
+            print(f"Megacloud error: {e}")
             return {"sources": [], "tracks": []}

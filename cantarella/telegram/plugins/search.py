@@ -22,7 +22,7 @@ async def handle_url(client: Client, message):
     is_admin = await db.is_admin(message.from_user.id)
     if message.from_user.id != OWNER_ID and not is_admin:
         return await message.reply("<blockquote>❌ <b>ᴏɴʟʏ ᴀᴜᴛʜᴏʀɪᴢᴇᴅ ᴀᴅᴍɪɴɪꜱᴛʀᴀᴛᴏʀꜱ ᴄᴀɴ ꜱᴇᴀʀᴄʜ ᴏʀ ᴅᴏᴡɴʟᴏᴀᴅ ᴀɴɪᴍᴇ.</b>\n\nᴄᴏɴᴛᴀᴄᴛ ᴛʜᴇ ᴏᴡɴᴇʀ ɪғ ʏᴏᴜ ᴛʜɪɴᴋ ᴛʜɪꜱ ɪꜱ ᴀ ᴍɪꜱᴛᴀᴋᴇ.</blockquote>", parse_mode=ParseMode.HTML)
-    if "hianime" not in url.lower() and "cantarella" not in url.lower():
+    if "hianime" not in url.lower() and "cantarella" not in url.lower() and "aniwatchtv.to" not in url.lower():
         # Treat as a search query
         status_msg = await client.send_photo(
             message.chat.id,

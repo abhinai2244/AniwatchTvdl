@@ -17,12 +17,13 @@ async def on_toggle_ongoing(client: Client, callback_query):
     if not is_admin and callback_query.from_user.id != OWNER_ID:
         return await callback_query.answer("❌ You are not authorized to use this.", show_alert=True)
 
-    import cantarella.core.state as state
-    state.ongoing_enabled = not state.ongoing_enabled
+    current_status = await db.get_user_setting(0, "ongoing_enabled", False)
+    new_status = not current_status
+    await db.set_user_setting(0, "ongoing_enabled", new_status)
 
-    status_icon  = "✅ ᴏɴ"        if state.ongoing_enabled else "❌ ᴏꜰꜰ"
-    toggle_label = "🔴 ᴛᴜʀɴ ᴏꜰꜰ" if state.ongoing_enabled else "🟢 ᴛᴜʀɴ ᴏɴ"
-    action       = "ᴇɴᴀʙʟᴇᴅ"     if state.ongoing_enabled else "ᴅɪꜱᴀʙʟᴇᴅ"
+    status_icon  = "✅ ᴏɴ"        if new_status else "❌ ᴏꜰꜰ"
+    toggle_label = "🔴 ᴛᴜʀɴ ᴏꜰꜰ" if new_status else "🟢 ᴛᴜʀɴ ᴏɴ"
+    action       = "ᴇɴᴀʙʟᴇᴅ"     if new_status else "ᴅɪꜱᴀʙʟᴇᴅ"
 
     caption = (
         "<blockquote><b>⚙️ ʙᴏᴛ ꜱᴇᴛᴛɪɴɢꜱ</b>\n\n"
