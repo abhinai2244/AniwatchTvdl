@@ -7,7 +7,7 @@ import re
 
 # Simple cache for AniList data
 ani_cache = {}
-
+#@cantarellabots
 # Dummy reporting utility
 class Report:
     async def report(self, message, level="info", log=True):
@@ -42,7 +42,7 @@ CAPTION_FORMAT = """
 ➥ Gᴇɴʀᴇs:- {genres}
 ➥ Aᴜᴅɪᴏ:- {audio}</i></blockquote>
 <b>✦━━━━━━━━━━━━━━━━━━━━━━━━✦</b>
-<b><i>⌬ Pᴏᴡᴇʀᴇᴅ ʙʏ:- @Animeworld_zone</i></b>
+<b><i>⌬ Pᴏᴡᴇʀᴇᴅ ʙʏ:- @cantarellabots</i></b>
 """
 
 GENRES_EMOJI = {
@@ -88,7 +88,7 @@ GENRE_NORMALIZATION = {
 
 ANIME_GRAPHQL_QUERY = """
 query ($id: Int, $search: String, $seasonYear: Int) {
-  Media(id: $id, type: ANIME, format_not_in: [MUSIC, MANGA, NOVEL, ONE_SHOT], search: $search, seasonYear: $seasonYear) {
+  Media(id: $id, type: ANIME, format_not_in: [MUSIC, MANGA, NOVEL, ONE_SHOT], search: $search, seasonYear: $seasonYear, sort: POPULARITY_DESC) {
     id
     idMal
     title {
@@ -198,11 +198,21 @@ class AniLister:
         cache_key = f"{self.__ani_name}:{self.__ani_year}"
         if cache_key in ani_cache:
             return ani_cache[cache_key]
+        
+        # Try without seasonYear first as it is more robust to find the correct anime
+        self.__update_vars(year=False)
         res_code, resp_json, res_heads = await self.post_data()
-        while res_code == 404 and self.__ani_year > 2020:
-            self.__update_vars()
-            await rep.report(f"AniList Query Name: {self.__ani_name}, Retrying with {self.__ani_year}", "warning", log=False)
+        
+        # If not found, try with the current year and decrement
+        if res_code == 404:
+            self.__ani_year = datetime.now().year
+            self.__vars = {'search': self.__ani_name, 'seasonYear': self.__ani_year}
             res_code, resp_json, res_heads = await self.post_data()
+            
+            while res_code == 404 and self.__ani_year > 2020:
+                self.__update_vars()
+                await rep.report(f"AniList Query Name: {self.__ani_name}, Retrying with {self.__ani_year}", "warning", log=False)
+                res_code, resp_json, res_heads = await self.post_data()
 
         # If still 404, try to simplify name (HiAnime often uses double spaces or long strings)
         if res_code == 404:
@@ -212,10 +222,6 @@ class AniLister:
                 self.__ani_name = simple_name
                 self.__update_vars(year=False)
                 res_code, resp_json, res_heads = await self.post_data()
-
-        if res_code == 404:
-            self.__update_vars(year=False)
-            res_code, resp_json, res_heads = await self.post_data()
         if res_code == 200:
             data = resp_json.get('data', {}).get('Media', {}) or {}
             ani_cache[cache_key] = data
